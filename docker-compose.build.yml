@@ -1,6 +1,9 @@
+# For local building — use: docker compose -f docker-compose.build.yml up -d --build
 services:
   app:
-    image: ghcr.io/mrchrisoliver/dashboardarr:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: dashboardarr
     restart: unless-stopped
     ports:

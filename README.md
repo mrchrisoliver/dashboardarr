@@ -20,11 +20,23 @@ A minimalistic, self-hosted dashboard for organizing bookmarks to your self-host
 
 ## Quick Start with Docker
 
+Pull the pre-built image from GitHub Container Registry:
+
 ```bash
 docker compose up -d
 ```
 
+Or build locally:
+
+```bash
+docker compose -f docker-compose.build.yml up -d --build
+```
+
 The app will be available at `http://localhost:8080`. Visit `/register` to create your first account.
+
+### Portainer
+
+Add a new stack in Portainer and paste the contents of `docker-compose.yml`, or point it at this repository. The image `ghcr.io/mrchrisoliver/dashboardarr:latest` is published automatically on every push to `main` and supports both `linux/amd64` and `linux/arm64`.
 
 ### Configuration
 
