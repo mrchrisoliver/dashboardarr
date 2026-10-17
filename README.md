@@ -1,102 +1,92 @@
 # Dashboardarr
 
-A minimalistic, self-hosted dashboard for organizing bookmarks to your self-hosted applications. Inspired by [Homepage](https://github.com/gethomepage/homepage).
+A minimal, self-hosted dashboard of links to your homelab services. Inspired by [Homepage](https://github.com/gethomepage/homepage).
 
-![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
-![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vuedotjs&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-5FA04E?logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## Features
 
-- **Bookmark Management** - Full CRUD for organizing your self-hosted services
-- **Smart URL Switching** - Automatically uses internal IPs when accessed via IP, or domain names when accessed via domain
-- **Icon Library** - 90+ icons for popular self-hosted services (Proxmox, Sonarr, Radarr, Plex, Jellyfin, Nginx Proxy Manager, qBittorrent, and more) powered by [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons)
-- **Authentication** - Built-in login and registration
-- **Dark Theme** - Modern dark UI with glassmorphism design
-- **Sortable** - Custom sort ordering for your bookmarks
-- **Docker Ready** - Single-container deployment with SQLite
-- **Lightweight** - No external database required
+- **Manage services in the UI**: add, edit and delete services without touching config files
+- **Smart addresses**: open the dashboard by IP and every link uses the service's IP and port; open it by domain and every link uses the service's domain
+- **Icon picker**: 100+ icons for popular self-hosted services, from [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons), or type any other icon name from that set
+- **Reorder**: drag services into place in edit mode, or use the arrow keys on a card's handle
+- **Search**: filter services by name
+- **Single container**: Node.js + SQLite, data kept in one Docker volume
+- **No authentication**: meant for a trusted home network. Don't expose it to the internet without putting auth in front of it.
 
-## Quick Start with Docker
-
-Pull the pre-built image from GitHub Container Registry:
+## Quick start with Docker
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-Or build locally:
-
-```bash
-docker compose -f docker-compose.build.yml up -d --build
-```
-
-The app will be available at `http://localhost:8080`. Visit `/register` to create your first account.
-
-### Portainer
-
-Add a new stack in Portainer and paste the contents of `docker-compose.yml`, or point it at this repository. The image `ghcr.io/mrchrisoliver/dashboardarr:latest` is published automatically on every push to `main` and supports both `linux/amd64` and `linux/arm64`.
+Open `http://<server-ip>:8080`. On first run, the dashboard is seeded with a few example services; delete or edit them in the UI.
 
 ### Configuration
 
-| Environment Variable | Default | Description |
+| Variable | Default | Description |
 |---|---|---|
-| `APP_PORT` | `8080` | Host port to expose |
-| `APP_URL` | `http://localhost:8080` | Public URL of the app |
-| `APP_KEY` | *(auto-generated)* | Laravel encryption key |
+| `APP_PORT` | `8080` | Host port (Compose only) |
+| `PORT` | `3000` | Port the app listens on inside the container |
+| `DB_PATH` | `/data/dashboardarr.db` | SQLite database file |
+| `SEED` | `true` | Seed example services when the database is first created. Set to `false` to start empty. |
 
-### Persistent Data
+### Persistent data
 
-The SQLite database is stored in a Docker volume (`dashboardarr-data`), so your data persists across container restarts and updates.
+The SQLite database lives in the `dashboardarr-data` volume, mounted at `/data`, so services survive restarts and image updates.
 
-## Local Development
+### Portainer
 
-### Requirements
+Add a stack that points at this repository. Portainer builds the image from the `Dockerfile` using `docker-compose.yml`.
 
-- PHP 8.3+
-- Composer
-- Node.js 22+
-- SQLite
+## How addresses work
 
-### Setup
+Each service has an **IP address**, an optional **port** and a **domain**.
+
+| You open the dashboard at | Links go to |
+|---|---|
+| An IP or `localhost` (e.g. `http://10.0.1.50:8080`) | `http://<ip>:<port>` |
+| A domain (e.g. `https://dash.example.com`) | `https://<domain>` |
+
+If a service only has one of the two, that one is always used.
+
+## Local development
+
+Requires Node.js 22 or later.
 
 ```bash
-# Install dependencies
-composer install
 npm install
-
-# Configure environment
-cp .env.example .env
-php artisan key:generate
-
-# Create database and run migrations
-touch database/database.sqlite
-php artisan migrate
-
-# Start development servers
-composer run dev
+npm run dev   # http://localhost:3000, restarts on change
+npm test
 ```
 
-The app will be available at `http://localhost:8000`.
+The development database is created at `./data/dashboardarr.db`.
 
-## Smart URL Switching
+## API
 
-Each bookmark has two URL fields:
+All endpoints take and return JSON.
 
-- **External URL** - The public domain (e.g. `https://proxmox.example.com`)
-- **Internal URL** - The local IP address (e.g. `192.168.1.100:8006`)
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/services` | List services in display order |
+| `POST` | `/api/services` | Create a service: `{ name, icon, ip, port, domain }` |
+| `PUT` | `/api/services/:id` | Update a service |
+| `DELETE` | `/api/services/:id` | Delete a service |
+| `PUT` | `/api/services/order` | Reorder: `{ "ids": [3, 1, 2] }` with every id once |
+| `GET` | `/api/health` | Health check |
 
-When you access Dashboardarr via an **IP address** (e.g. `192.168.1.50:8080`), bookmark links will use the **internal URL**. When accessed via a **domain name** (e.g. `dashboard.example.com`), links will use the **external URL**.
+Validation errors return `422` with `{ "errors": { "<field>": "<message>" } }`.
 
-## Tech Stack
+## Tech stack
 
-- **Backend** - [Laravel 13](https://laravel.com) with [Inertia.js](https://inertiajs.com)
-- **Frontend** - [Vue 3](https://vuejs.org) with [Tailwind CSS](https://tailwindcss.com)
-- **Database** - SQLite
-- **Icons** - [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) by Homarr Labs
-- **Auth** - [Laravel Breeze](https://laravel.com/docs/starter-kits)
+- **Backend**: [Express 5](https://expressjs.com) on Node.js 22
+- **Database**: SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- **Frontend**: plain HTML, CSS and JavaScript, with no build step
+- **Icons**: [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) by Homarr Labs
 
 ## License
 
-[MIT](LICENSE)
+MIT
